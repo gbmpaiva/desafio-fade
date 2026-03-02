@@ -3,6 +3,7 @@ export interface DashboardStats {
   activeEvents: number
   totalParticipants: number
   totalCheckins: number
+  checkinToday: number
   upcomingEvents: UpcomingEvent[]
   recentActivity: ActivityItem[]
 }

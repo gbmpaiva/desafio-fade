@@ -1,3 +1,4 @@
+
 export interface Participant {
   id: string
   name: string
@@ -10,7 +11,7 @@ export interface Participant {
   createdAt: string
 }
 
-export interface CreateParticipantPayload {
+export interface ParticipantFormData {
   name: string
   email: string
   eventId: string

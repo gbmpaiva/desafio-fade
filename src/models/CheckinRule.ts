@@ -12,6 +12,10 @@ export interface CheckinRule {
   order: number
   createdAt: string
   updatedAt: string
+  advanceTimeMinutes: number
+  requireDocument: boolean
+  allowMultipleCheckin: boolean
+  notes: string
 }
 
 export interface CreateCheckinRulePayload {
