@@ -10,10 +10,11 @@ export interface Event {
   status: EventStatus
   capacity: number
   participantCount: number
-  checkinrule?: CheckinRule
+  checkinrules?: CheckinRule[] 
   description?: string
   createdAt: string
   updatedAt: string
+
 }
 
 export type CreateEventPayload = Omit<Event, 'id' | 'participantCount' | 'createdAt' | 'updatedAt'>
