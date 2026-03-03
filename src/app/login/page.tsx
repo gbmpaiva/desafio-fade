@@ -1,26 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "../../contexts/AuthContext";
-import { Button, Input } from "../../components/ui/index";
 import "./login.css";
-import fadeLogo from "../../../public/fade_logo.png";
 
 export default function LoginPage() {
-  const { login, isAuthenticated } = useAuth();
+ const { login, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [error, setError]       = useState("");
+  const [loading, setLoading]   = useState(false);
 
-  if (isAuthenticated) {
-    router.replace("/dashboard");
-    return null;
-  }
+  
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace("/dashboard");
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  // Enquanto ainda verifica a sessão ou já está autenticado, não renderiza o form
+  if (isLoading || isAuthenticated) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,6 +41,7 @@ export default function LoginPage() {
       setLoading(false);
     }
   }
+  
 
   return (
     <div className="login-root">
