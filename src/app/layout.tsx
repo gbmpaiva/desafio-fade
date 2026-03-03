@@ -20,8 +20,11 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "EventosPRO — FADE UFPE",
+  title: "Eventos FADE UFPE",
   description: "Sistema de gerenciamento de eventos da FADE UFPE",
+  icons: {
+    icon: "/public/assets/fade_logo.png",
+  },
 };
 
 const isMockEnabled = process.env.NEXT_PUBLIC_API_MOCKING === "enabled";

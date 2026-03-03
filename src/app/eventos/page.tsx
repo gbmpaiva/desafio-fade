@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, Settings, Search, CalendarDays, X } from "lucide-react";
 import * as api from "../../lib/api";
 import { Event, EventFormData } from "@/src/models/Event";
-import { CheckinRule } from "@/src/models/CheckinRule";
 import { AppLayout } from "../../components/layout/AppLayout";
 import { AuthGuard } from "../../components/AuthGuard";
+import { CheckinRulesPage } from "../../components/layout/CheckinRulesPage";
 
 export default function EventosPage() {
   return (
@@ -51,9 +51,7 @@ function EventosContent() {
   const [formError, setFormError] = useState("");
 
   const [regrasOpen,     setRegrasOpen]     = useState(false);
-  const [regrasEventoId, setRegrasEventoId] = useState<string | null>(null);
-  const [regras,         setRegras]         = useState<CheckinRule | null>(null);
-  const [savingRegras,   setSavingRegras]   = useState(false);
+  const [regrasEvento,   setRegrasEvento]   = useState<Event | null>(null);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -94,16 +92,9 @@ function EventosContent() {
   }
 
   /* ── Regras ── */
-  async function openRegras(id: string) {
-    setRegrasEventoId(id); setRegrasOpen(true);
-    setRegras(await api.getRegrasCheckin(id));
-  }
-
-  async function handleSaveRegras() {
-    if (!regrasEventoId || !regras) return;
-    setSavingRegras(true);
-    try { await api.updateRegrasCheckin(regrasEventoId, regras); setRegrasOpen(false); }
-    finally { setSavingRegras(false); }
+  function openRegras(evento: Event) {
+    setRegrasEvento(evento);
+    setRegrasOpen(true);
   }
 
   /* ── Filter ── */
@@ -201,7 +192,7 @@ function EventosContent() {
                       </td>
                       <td>
                         <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
-                          <button className="icon-btn accent" title="Regras de Check-in" onClick={() => openRegras(evento.id)}>
+                          <button className="icon-btn accent" title="Regras de Check-in" onClick={() => openRegras(evento)}>
                             <Settings size={15} />
                           </button>
                           <button className="icon-btn" title="Editar" onClick={() => openEdit(evento)}>
@@ -287,46 +278,17 @@ function EventosContent() {
       </FadeModal>
 
       {/* ── Regras Modal ── */}
-      <FadeModal
-        open={regrasOpen}
-        onClose={() => setRegrasOpen(false)}
-        title="Regras de Check-in"
-        footer={
-          <>
-            <button className="btn btn-secondary" onClick={() => setRegrasOpen(false)}>Cancelar</button>
-            <button className="btn btn-primary" onClick={handleSaveRegras} disabled={savingRegras}>
-              {savingRegras ? <><span className="spinner-fade" />Salvando…</> : "Salvar"}
-            </button>
-          </>
-        }
-      >
-        {!regras ? (
-          <div style={{ display: "flex", justifyContent: "center", padding: "32px 0" }}>
-            <span className="spinner-fade dark" style={{ width: 32, height: 32, borderWidth: 3 }} />
+      {regrasOpen && regrasEvento && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setRegrasOpen(false)}>
+          <div className="modal-box modal-box-wide">
+            <CheckinRulesPage
+              eventId={regrasEvento.id}
+              eventName={regrasEvento.name}
+              onClose={() => setRegrasOpen(false)}
+            />
           </div>
-        ) : (
-          <div className="form-space">
-            <Field label="Antecedência mínima (minutos)">
-              <input className="field-input-fade" type="number" min={0} value={regras.advanceTimeMinutes}
-                onChange={(e) => setRegras({ ...regras, advanceTimeMinutes: Number(e.target.value) })} />
-            </Field>
-            <label className="checkbox-row">
-              <input type="checkbox" className="checkbox-fade" checked={regras.requireDocument}
-                onChange={(e) => setRegras({ ...regras, requireDocument: e.target.checked })} />
-              <span className="checkbox-label">Exigir documento com foto</span>
-            </label>
-            <label className="checkbox-row">
-              <input type="checkbox" className="checkbox-fade" checked={regras.allowMultipleCheckin}
-                onChange={(e) => setRegras({ ...regras, allowMultipleCheckin: e.target.checked })} />
-              <span className="checkbox-label">Permitir múltiplos check-ins</span>
-            </label>
-            <Field label="Observações">
-              <textarea className="field-input-fade field-textarea-fade" value={regras.notes}
-                onChange={(e) => setRegras({ ...regras, notes: e.target.value })} />
-            </Field>
-          </div>
-        )}
-      </FadeModal>
+        </div>
+      )}
     </>
   );
 }
@@ -355,6 +317,9 @@ function FadeModal({
     </div>
   );
 }
+
+// Adicione ao seu CSS global:
+// .modal-box-wide { max-width: 780px; width: 100%; padding: 0; overflow: hidden; }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
