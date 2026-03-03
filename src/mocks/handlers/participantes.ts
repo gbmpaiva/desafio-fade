@@ -61,10 +61,41 @@ export const participantesHandlers = [
 
     const body = (await request.json()) as Partial<ParticipantFormData & { checkin: boolean }>;
 
-    // If eventoId changed, update eventoNome too
+    // If eventoId changed, validate new event and update eventName
     if (body.eventId && body.eventId !== participant[index].eventId) {
       const evento = event.find((e) => e.id === body.eventId);
-      body.name = evento?.name ?? participant[index].eventName;
+
+      if (!evento) {
+        return HttpResponse.json({ message: "Evento não encontrado." }, { status: 404 });
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const eventDate = new Date(evento.date);
+      eventDate.setHours(0, 0, 0, 0);
+
+      if (evento.status === "cancelled") {
+        return HttpResponse.json(
+          { message: "Não é possível mover participante para um evento cancelado." },
+          { status: 422 }
+        );
+      }
+
+      if (evento.status === "closed") {
+        return HttpResponse.json(
+          { message: "Não é possível mover participante para um evento encerrado." },
+          { status: 422 }
+        );
+      }
+
+      if (eventDate < today) {
+        return HttpResponse.json(
+          { message: "Não é possível mover participante para um evento com data passada." },
+          { status: 422 }
+        );
+      }
+
+      body.name = evento.name;
     }
 
     participant[index] = { ...participant[index], ...body };
