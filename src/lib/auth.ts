@@ -6,6 +6,7 @@ export const AUTH_COOKIE_NAME = "auth_token";
 export interface JWTPayload {
   sub: string;
   email: string;
+  name: string;
 }
 
 const JWT_SECRET = new TextEncoder().encode(
