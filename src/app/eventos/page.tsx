@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, Settings, Search, CalendarDays, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Settings, Search, CalendarDays, X, Eye } from "lucide-react";
 import * as api from "../../lib/api";
 import { Event, EventFormData } from "@/src/models/Event";
 import { AppLayout } from "../../components/layout/AppLayout";
 import { AuthGuard } from "../../components/AuthGuard";
 import { CheckinRulesPage } from "../../components/layout/CheckinRulesPage";
+import { EventDetailModal } from "../../components/layout/EventDetail"; 
 
 export default function EventosPage() {
   return (
@@ -28,6 +29,7 @@ function statusInfo(s: Event["status"]): { variant: StatusVariant; label: string
     cancelled: { variant: "red"   as StatusVariant, label: "Cancelado" },
   })[s];
 }
+
 const STATUS_OPTIONS = [
   { value: "active",    label: "Ativo" },
   { value: "closed",    label: "Encerrado" },
@@ -40,9 +42,9 @@ const EMPTY_FORM: EventFormData = {
 
 /* ─── Component ─────────────────────────────────────────────────── */
 function EventosContent() {
-  const [eventos, setEventos]   = useState<Event[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [search,  setSearch]    = useState("");
+  const [eventos, setEventos] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search,  setSearch]  = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing,   setEditing]   = useState<Event | null>(null);
@@ -50,10 +52,11 @@ function EventosContent() {
   const [saving,    setSaving]    = useState(false);
   const [formError, setFormError] = useState("");
 
-  const [regrasOpen,     setRegrasOpen]     = useState(false);
-  const [regrasEvento,   setRegrasEvento]   = useState<Event | null>(null);
+  const [regrasOpen,   setRegrasOpen]   = useState(false);
+  const [regrasEvento, setRegrasEvento] = useState<Event | null>(null);
 
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingId,     setDeletingId]     = useState<string | null>(null);
+  const [viewingEventId, setViewingEventId] = useState<string | null>(null); // ← estado do modal de detalhes
 
   async function load() {
     setLoading(true);
@@ -70,8 +73,16 @@ function EventosContent() {
 
   function openEdit(e: Event) {
     setEditing(e);
-    setForm({ name: e.name, description: e.description, date: e.date.slice(0, 16), location: e.location, capacity: e.capacity, status: e.status });
-    setFormError(""); setModalOpen(true);
+    setForm({
+      name: e.name,
+      description: e.description,
+      date: e.date.slice(0, 16),
+      location: e.location,
+      capacity: e.capacity,
+      status: e.status,
+    });
+    setFormError("");
+    setModalOpen(true);
   }
 
   async function handleSave() {
@@ -81,20 +92,32 @@ function EventosContent() {
     setSaving(true);
     try {
       editing ? await api.updateEvent(editing.id, form) : await api.createEvent(form);
-      setModalOpen(false); await load();
+      setModalOpen(false);
+      await load();
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : "Erro ao salvar.");
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleDelete(id: string) {
-    await api.deleteEvent(id); setDeletingId(null); await load();
+    await api.deleteEvent(id);
+    setDeletingId(null);
+    await load();
   }
 
   /* ── Regras ── */
   function openRegras(evento: Event) {
     setRegrasEvento(evento);
     setRegrasOpen(true);
+  }
+
+  
+  function handleEditRulesFromDetail() {
+    const evento = eventos.find((e) => e.id === viewingEventId) ?? null;
+    setViewingEventId(null);
+    if (evento) openRegras(evento);
   }
 
   /* ── Filter ── */
@@ -198,6 +221,10 @@ function EventosContent() {
                           <button className="icon-btn" title="Editar" onClick={() => openEdit(evento)}>
                             <Pencil size={15} />
                           </button>
+                          {/* ── Botão Visualizar ── */}
+                          <button className="icon-btn accent" title="Visualizar detalhes" onClick={() => setViewingEventId(evento.id)}>
+                            <Eye size={15} />
+                          </button>
                           <button className="icon-btn danger" title="Excluir" onClick={() => setDeletingId(evento.id)}>
                             <Trash2 size={15} />
                           </button>
@@ -212,7 +239,16 @@ function EventosContent() {
         </div>
       </div>
 
-      {/* ── Create / Edit Modal ── */}
+      {/* ── Modal Detalhes do Evento ── */}
+      {viewingEventId && (
+        <EventDetailModal
+          eventId={viewingEventId}
+          onClose={() => setViewingEventId(null)}
+          onEditRules={handleEditRulesFromDetail} // ← fecha detalhes e abre regras
+        />
+      )}
+
+      {/* ── Modal Criar / Editar ── */}
       <FadeModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -221,7 +257,9 @@ function EventosContent() {
           <>
             <button className="btn btn-secondary" onClick={() => setModalOpen(false)}>Cancelar</button>
             <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-              {saving ? <><span className="spinner-fade" />{editing ? "Salvando…" : "Criando…"}</> : (editing ? "Salvar" : "Criar")}
+              {saving
+                ? <><span className="spinner-fade" />{editing ? "Salvando…" : "Criando…"}</>
+                : (editing ? "Salvar" : "Criar")}
             </button>
           </>
         }
@@ -259,7 +297,7 @@ function EventosContent() {
         </div>
       </FadeModal>
 
-      {/* ── Delete Modal ── */}
+      {/* ── Modal Excluir ── */}
       <FadeModal
         open={!!deletingId}
         onClose={() => setDeletingId(null)}
@@ -277,7 +315,7 @@ function EventosContent() {
         </p>
       </FadeModal>
 
-      {/* ── Regras Modal ── */}
+      {/* ── Modal Regras de Check-in ── */}
       {regrasOpen && regrasEvento && (
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setRegrasOpen(false)}>
           <div className="modal-box modal-box-wide">
@@ -317,9 +355,6 @@ function FadeModal({
     </div>
   );
 }
-
-// Adicione ao seu CSS global:
-// .modal-box-wide { max-width: 780px; width: 100%; padding: 0; overflow: hidden; }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

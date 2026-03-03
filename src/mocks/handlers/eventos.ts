@@ -71,73 +71,6 @@ const body = (await request.json()) as Partial<EventFormData>;
     return new HttpResponse(null, { status: 204 });
   }),
 
-  // GET /api/eventos/:id/regras-checkin
-  http.get("/api/eventos/:id/regras-checkin", async ({ params }) => {
-    await delay(300);
-
-    const evento = event.find((e) => e.id === params.id);
-    if (!evento) {
-      return HttpResponse.json({ message: "Evento não encontrado." }, { status: 404 });
-    }
-
-const regras: CheckinRule = evento.checkinrule ?? {
-  id: `regra-${params.id}`,
-  name: "Regra padrão",
-  type: "document",
-  isActive: true,
-  isRequired: false,
-  eventId: String(params.id),
-  advanceTimeMinutes: 15,
-  requireDocument: false,
-  allowMultipleCheckin: false,
-  notes: "",
-  windowBefore: 0,
-  windowAfter: 0,
-  order: 0,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-};
-
-    return HttpResponse.json(regras);
-  }),
-
-  // PUT /api/eventos/:id/regras-checkin
-  http.put("/api/eventos/:id/regras-checkin", async ({ params, request }) => {
-    await delay(500);
-
-    const index = event.findIndex((e) => e.id === params.id);
-    if (index === -1) {
-      return HttpResponse.json({ message: "Evento não encontrado." }, { status: 404 });
-    }
-
-    const body = (await request.json()) as Partial<Omit<CheckinRule, "eventoId">>;
-
-const updatedRegras: CheckinRule = {
-
-  id: `regra-${params.id}`,
-  name: "Regra padrão",
-  type: "document",
-  isActive: true,
-  isRequired: false,
-  eventId: String(params.id),
-  advanceTimeMinutes: 15,
-  requireDocument: false,
-  allowMultipleCheckin: false,
-  notes: "",
-  windowBefore: 0,
-  windowAfter: 0,
-  order: 0,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-
-};
-
-    event[index] = { ...event[index], checkinrule: updatedRegras };
-
-    return HttpResponse.json(updatedRegras);
-  }),
-
-  // Helper: sync participantesCount when listing
   http.get("/api/eventos", async () => {
     await delay(400);
     const synced = event.map((e) => ({
@@ -146,4 +79,60 @@ const updatedRegras: CheckinRule = {
     }));
     return HttpResponse.json(synced);
   }),
+// GET /api/eventos/:id/regras-checkin
+http.get("/api/eventos/:id/regras-checkin", async ({ params }) => {
+  await delay(300);
+
+  const evento = event.find((e) => e.id === params.id);
+  if (!evento) {
+    return HttpResponse.json({ message: "Evento não encontrado." }, { status: 404 });
+  }
+
+  const regras: CheckinRule[] = evento.checkinrules ?? [];
+  return HttpResponse.json(regras);
+}),
+
+// PUT /api/eventos/:id/regras-checkin
+http.put("/api/eventos/:id/regras-checkin", async ({ params, request }) => {
+  await delay(500);
+
+  const index = event.findIndex((e) => e.id === params.id);
+  if (index === -1) {
+    return HttpResponse.json({ message: "Evento não encontrado." }, { status: 404 });
+  }
+
+  const evento = event[index];
+
+  // ── Validação 1: status impede edição ──────────────────────
+  if (evento.status === "closed" || evento.status === "cancelled") {
+    return HttpResponse.json(
+      { message: `Não é possível alterar regras de um evento ${evento.status === "closed" ? "encerrado" : "cancelado"}.` },
+      { status: 422 }
+    );
+  }
+
+  // ── Validação 2: data/hora do evento já passou ──────────────
+  const eventDate = new Date(evento.date);
+  const now = new Date();
+  if (eventDate < now) {
+    return HttpResponse.json(
+      { message: "Não é possível alterar regras de um evento que já ocorreu." },
+      { status: 422 }
+    );
+  }
+
+  // ── Salva as regras (body real, não hardcoded) ──────────────
+  const body = (await request.json()) as CheckinRule[];
+  event[index] = {
+    ...evento,
+    checkinrules: body,
+    updatedAt: new Date().toISOString(),
+  };
+
+  return HttpResponse.json(body);
+}),
+
 ];
+
+
+  

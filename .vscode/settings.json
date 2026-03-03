@@ -1,0 +1,30 @@
+{
+    "workbench.colorCustomizations": {
+        "activityBar.background": "#f9b477",
+        "activityBar.activeBackground": "#1C312A",
+        "activityBar.activeBorder": "#311C24",
+        "activityBar.foreground": "#000000",
+        "activityBar.inactiveForeground": "#F9FBFA99",
+        "activityBarBadge.background": "#311C24",
+        "activityBarBadge.foreground": "#F9FBFA",
+        "titleBar.activeBackground": "#f9b477",
+        "titleBar.activeForeground": "#000000",
+        "titleBar.inactiveBackground": "#f9b477",
+        "titleBar.inactiveForeground": "#000000",
+        "sash.hoverBorder": "#1C312A",
+        "commandCenter.border": "#F9FBFA99",
+        "statusBar.background": "#f9b477",
+        "statusBar.foreground": "#000000",
+        "statusBarItem.hoverBackground": "#243E35",
+        "statusBarItem.remoteBackground": "#28453B",
+        "statusBarItem.remoteForeground": "#F9FBFA",
+        "titleBar.border": "#f9b477",
+        "statusBar.debuggingBackground": "#f9b477",
+        "statusBar.debuggingForeground": "#000000",
+        "tab.activeBorder": "#f9b477",
+        "iLoveWorkSpaceColors": true,
+        "iLoveWorkSpaceRandom": false
+    },
+    "totvsLanguageServer.welcomePage": false,
+    "totvsLanguageServer.editor.linter.includes": "C:\\TOTVS\\Protheus\\include"
+}
