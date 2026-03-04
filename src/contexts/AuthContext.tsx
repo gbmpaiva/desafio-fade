@@ -7,6 +7,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  Suspense,
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as api from "../lib/api";
@@ -20,21 +21,18 @@ import {
 } from "../lib/cookies";
 import { decodeToken } from "../lib/auth";
 
-// ─── Context ──────────────────────────────────────────────────────────────────
-
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// ─── Provider ─────────────────────────────────────────────────────────────────
+// ─── Inner Provider (usa useSearchParams aqui dentro) ─────────────────────────
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+function AuthProviderInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams(); // ✅ seguro dentro do Suspense
 
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Reidrata a sessão ao montar (F5, nova aba, etc.)
   useEffect(() => {
     const storedToken = getClientCookie();
 
@@ -43,18 +41,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Decodifica o payload do JWT sem chamar a API
-    // Isso garante que o estado seja restaurado mesmo antes do MSW inicializar
     const payload = decodeToken(storedToken);
 
     if (!payload) {
-      // Token malformado — descarta
       removeClientCookie();
       setIsLoading(false);
       return;
     }
 
-    // Restaura o estado mínimo a partir do payload do token
     setToken(storedToken);
     setUser({ id: payload.sub, email: payload.email } as User);
     setIsLoading(false);
@@ -104,6 +98,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+// ─── Provider público (envolve com Suspense) ──────────────────────────────────
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={null}>
+      <AuthProviderInner>{children}</AuthProviderInner>
+    </Suspense>
+  );
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
