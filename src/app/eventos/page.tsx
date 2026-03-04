@@ -7,7 +7,8 @@ import { Event, EventFormData } from "@/src/models/Event";
 import { AppLayout } from "../../components/layout/AppLayout";
 import { AuthGuard } from "../../components/AuthGuard";
 import { CheckinRulesPage } from "../../components/layout/CheckinRulesPage";
-import { EventDetailModal } from "../../components/layout/EventDetail"; 
+import { EventDetailModal } from "../../components/layout/EventDetail";
+import { Pagination } from "../../components/ui/pagination";
 
 export default function EventosPage() {
   return (
@@ -40,11 +41,16 @@ const EMPTY_FORM: EventFormData = {
   name: "", description: "", date: "", location: "", capacity: 100, status: "active",
 };
 
+const PAGE_SIZE = 8;
+
 /* ─── Component ─────────────────────────────────────────────────── */
 function EventosContent() {
   const [eventos, setEventos] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [search,  setSearch]  = useState("");
+
+  /* pagination */
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing,   setEditing]   = useState<Event | null>(null);
@@ -56,7 +62,7 @@ function EventosContent() {
   const [regrasEvento, setRegrasEvento] = useState<Event | null>(null);
 
   const [deletingId,     setDeletingId]     = useState<string | null>(null);
-  const [viewingEventId, setViewingEventId] = useState<string | null>(null); // ← estado do modal de detalhes
+  const [viewingEventId, setViewingEventId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -65,6 +71,9 @@ function EventosContent() {
   }
 
   useEffect(() => { load(); }, []);
+
+  /* Reset to page 1 whenever search changes */
+  useEffect(() => { setCurrentPage(1); }, [search]);
 
   /* ── CRUD ── */
   function openCreate() {
@@ -113,19 +122,22 @@ function EventosContent() {
     setRegrasOpen(true);
   }
 
-  
   function handleEditRulesFromDetail() {
     const evento = eventos.find((e) => e.id === viewingEventId) ?? null;
     setViewingEventId(null);
     if (evento) openRegras(evento);
   }
 
-  /* ── Filter ── */
+  /* ── Filter + Pagination ── */
   const filtered = eventos.filter(
     (e) =>
       e.name.toLowerCase().includes(search.toLowerCase()) ||
       e.location.toLowerCase().includes(search.toLowerCase())
   );
+
+  const totalPages  = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage    = Math.min(currentPage, totalPages);
+  const paginated   = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
     <>
@@ -168,7 +180,7 @@ function EventosContent() {
             </thead>
             <tbody>
               {loading ? (
-                Array.from({ length: 4 }).map((_, i) => (
+                Array.from({ length: PAGE_SIZE }).map((_, i) => (
                   <tr key={i}>
                     {Array.from({ length: 5 }).map((_, j) => (
                       <td key={j}><div className="skeleton-cell" /></td>
@@ -186,7 +198,7 @@ function EventosContent() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((evento) => {
+                paginated.map((evento) => {
                   const { variant, label } = statusInfo(evento.status);
                   const pct = Math.min((evento.participantCount / evento.capacity) * 100, 100);
                   return (
@@ -221,7 +233,6 @@ function EventosContent() {
                           <button className="icon-btn" title="Editar" onClick={() => openEdit(evento)}>
                             <Pencil size={15} />
                           </button>
-                          {/* ── Botão Visualizar ── */}
                           <button className="icon-btn accent" title="Visualizar detalhes" onClick={() => setViewingEventId(evento.id)}>
                             <Eye size={15} />
                           </button>
@@ -237,6 +248,32 @@ function EventosContent() {
             </tbody>
           </table>
         </div>
+
+        {/* ── Pagination footer ── */}
+        {!loading && filtered.length > 0 && (
+          <div style={{
+            borderTop: "1px solid var(--neutral-100, #f3f4f6)",
+            padding: "12px 16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 8,
+          }}>
+            <span style={{ fontSize: 12, color: "var(--neutral-400, #9ca3af)" }}>
+              Exibindo{" "}
+              <strong style={{ color: "var(--neutral-600)" }}>
+                {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)}
+              </strong>{" "}
+              de <strong style={{ color: "var(--neutral-600)" }}>{filtered.length}</strong> eventos
+            </span>
+            <Pagination
+              currentPage={safePage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Modal Detalhes do Evento ── */}
@@ -244,7 +281,7 @@ function EventosContent() {
         <EventDetailModal
           eventId={viewingEventId}
           onClose={() => setViewingEventId(null)}
-          onEditRules={handleEditRulesFromDetail} // ← fecha detalhes e abre regras
+          onEditRules={handleEditRulesFromDetail}
         />
       )}
 

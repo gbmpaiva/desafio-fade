@@ -7,6 +7,7 @@ import { Participant, ParticipantFormData } from "@/src/models/Participant";
 import { Event } from "@/src/models/Event";
 import { AppLayout } from "../../components/layout/AppLayout";
 import { AuthGuard } from "../../components/AuthGuard";
+import { Pagination } from "../../components/ui/pagination";
 
 export default function ParticipantesPage() {
   return (
@@ -22,12 +23,17 @@ const EMPTY_FORM: ParticipantFormData = {
   name: "", email: "", phone: "", eventId: "",
 };
 
+const PAGE_SIZE = 10;
+
 function ParticipantesContent() {
   const [participantes, setParticipantes] = useState<Participant[]>([]);
   const [eventos,       setEventos]       = useState<Event[]>([]);
   const [loading,       setLoading]       = useState(true);
   const [search,        setSearch]        = useState("");
   const [filterEvento,  setFilterEvento]  = useState("");
+
+  /* pagination */
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing,   setEditing]   = useState<Participant | null>(null);
@@ -48,6 +54,9 @@ function ParticipantesContent() {
   }
 
   useEffect(() => { load(); }, []);
+
+  /* Reset page when filters change */
+  useEffect(() => { setCurrentPage(1); }, [search, filterEvento]);
 
   function openCreate() {
     setEditing(null);
@@ -85,6 +94,7 @@ function ParticipantesContent() {
     await load();
   }
 
+  /* ── Filter + Pagination ── */
   const filtered = participantes.filter((p) => {
     const matchSearch =
       p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -93,6 +103,9 @@ function ParticipantesContent() {
     return matchSearch && matchEvento;
   });
 
+  const totalPages  = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage    = Math.min(currentPage, totalPages);
+  const paginated   = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const checkinCount = filtered.filter((p) => p.checkedIn).length;
 
   return (
@@ -151,7 +164,7 @@ function ParticipantesContent() {
             </thead>
             <tbody>
               {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
+                Array.from({ length: PAGE_SIZE }).map((_, i) => (
                   <tr key={i}>
                     {Array.from({ length: 5 }).map((_, j) => (
                       <td key={j}><div className="skeleton-cell" /></td>
@@ -169,7 +182,7 @@ function ParticipantesContent() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((p) => (
+                paginated.map((p) => (
                   <tr key={p.id}>
                     <td>
                       <div className="table-cell-primary">{p.name}</div>
@@ -215,6 +228,32 @@ function ParticipantesContent() {
             </tbody>
           </table>
         </div>
+
+        {/* ── Pagination footer ── */}
+        {!loading && filtered.length > 0 && (
+          <div style={{
+            borderTop: "1px solid var(--neutral-100, #f3f4f6)",
+            padding: "12px 16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 8,
+          }}>
+            <span style={{ fontSize: 12, color: "var(--neutral-400, #9ca3af)" }}>
+              Exibindo{" "}
+              <strong style={{ color: "var(--neutral-600)" }}>
+                {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)}
+              </strong>{" "}
+              de <strong style={{ color: "var(--neutral-600)" }}>{filtered.length}</strong> participantes
+            </span>
+            <Pagination
+              currentPage={safePage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Create / Edit Modal ── */}
